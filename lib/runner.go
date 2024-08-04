@@ -1,6 +1,7 @@
 package lib
 
 import (
+	"flag"
 	"fmt"
 	"invoices_print/invoice_items"
 )
@@ -14,31 +15,34 @@ func RecoverFromPanic() {
 	}
 }
 
-func DisplayOptions(parallelFlag *bool, invoiceCount, projects *int) {
+func DisplayOptions(parallelFlag bool, invoiceCount, projects int) {
 	underlines := "___________________"
 	fmt.Println("In this run:")
 	fmt.Println(underlines)
 	fmt.Print("in parallel?\t")
-	if *parallelFlag {
+	if parallelFlag {
 		fmt.Println("YES")
 	} else {
 		fmt.Println("NO")
 	}
-	fmt.Println("invoice items:\t", *invoiceCount)
-	fmt.Println("projects:\t", *projects)
+	fmt.Println("invoice items:\t", invoiceCount)
+	fmt.Println("projects:\t", projects)
 	fmt.Println(underlines)
 }
 
-func SyncRun(invoiceCount, projects *int) {
+func SyncRun(invoiceCount, projects int) {
 	fmt.Println("taskNumber;projectName;hours;value")
-	for i := 0; i < *projects; i++ {
+	for i := 0; i < projects; i++ {
 		proj := invoice_items.NewProject()
 		invoice := proj.NewInvoice()
-		for _, item := range invoice.CollectInvoiceItemsSync(*invoiceCount) {
+		for _, item := range invoice.CollectInvoiceItemsSync(invoiceCount) {
 			fmt.Println(item)
 		}
 		fmt.Printf("The billed value is $ %.2f\n", invoice.TotalValue)
-		fmt.Printf("The discount was $ %.2f (%.2f pct)\n", invoice.TotalDiscount, invoice.Discount*100)
+		fmt.Printf(
+			"The discount was $ %.2f (%.2f pct)\n",
+			invoice.TotalDiscount, invoice.Discount*100,
+		)
 	}
 }
 
@@ -58,21 +62,21 @@ func PrintProjectInvoicesTotal(
 	fmt.Println("-----\t", total, "\t", totalDiscount, "\t", discount)
 }
 
-func AsyncRun(invoiceCount, projects *int) {
+func AsyncRun(invoiceCount, projects int) {
 	ch := make(chan *invoice_items.InvoiceItems, 3)
 	var items = make(map[*invoice_items.Invoice][]*invoice_items.InvoiceItems)
 
 	receivedItems := 0
-	for i := 0; i < *projects; i++ {
+	for i := 0; i < projects; i++ {
 		proj := invoice_items.NewProject()
 		items[proj.NewInvoice()] = []*invoice_items.InvoiceItems{}
 	}
 
 	for invoice := range items {
-		go invoice.CollectInvoiceItemsAsync(*invoiceCount, ch)
+		go invoice.CollectInvoiceItemsAsync(invoiceCount, ch)
 	}
 
-	for receivedItems != *projects**invoiceCount {
+	for receivedItems != projects*invoiceCount {
 		item, more := <-ch
 		if !more {
 			break
@@ -83,4 +87,13 @@ func AsyncRun(invoiceCount, projects *int) {
 		invoiceArray = append(invoiceArray, item)
 	}
 	PrintProjectInvoicesTotal(items)
+}
+
+func ParseFlags() (bool, int, int) {
+	parallelFlag := flag.Bool("parallel", false, "Will it be run in parallel mode? (default: FALSE)")
+	invoiceItems := flag.Int("items", 20, "The number of invoices to generate")
+	projects := flag.Int("projects", 1, "The number of projects to generate")
+	flag.Parse()
+
+	return *parallelFlag, *invoiceItems, *projects
 }

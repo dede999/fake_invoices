@@ -42,7 +42,7 @@ Arguments:
 - [x] Make it work
 - [x] Fix problem related to errors being treated on the base files
   - Now, it just panics, and breaks gracefully 
-- [ ] Fix over usage of pointers on runners file as suggested by [@Jonss](https://github.com/Jonss)
+- [x] Fix over usage of pointers on runners file as suggested by [@Jonss](https://github.com/Jonss)
 - [ ] Create tests
 - [ ] Implement writing data to files
 - [ ] Allow users to pass a project name as parameter 
